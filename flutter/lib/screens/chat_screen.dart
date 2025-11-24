@@ -314,22 +314,37 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         );
 
-        // 업로드
-        bool success = await ApiService.uploadPdf(
-          _currentRoom!.id,
+        // 1단계: PDF 파일 업로드
+        final uploadedPdf = await ApiService.uploadPDFFile(
           result.files.single.path!,
         );
 
-        Navigator.pop(context); // 로딩 다이얼로그 닫기
-
-        if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✅ PDF 업로드 완료! 이제 자료 기반으로 학습할 수 있습니다.'),
-              backgroundColor: Colors.green,
-            ),
+        if (uploadedPdf != null) {
+          // 2단계: 채팅방에 PDF 연결
+          final linkSuccess = await ApiService.linkPDFToRoom(
+            _currentRoom!.id,
+            uploadedPdf.id,
           );
+
+          Navigator.pop(context); // 로딩 다이얼로그 닫기
+
+          if (linkSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('✅ PDF 업로드 완료! 이제 자료 기반으로 학습할 수 있습니다.'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('⚠️ PDF는 업로드되었지만 채팅방 연결에 실패했습니다.'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
         } else {
+          Navigator.pop(context); // 로딩 다이얼로그 닫기
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('❌ PDF 업로드 실패. 파일을 확인해주세요.'),
@@ -340,6 +355,10 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       print('Error picking PDF: $e');
+      // 다이얼로그가 열려있으면 닫기
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('파일 선택 오류: $e')),
       );
