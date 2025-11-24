@@ -297,48 +297,71 @@ class _ChatScreenState extends State<ChatScreen> {
       if (result != null && result.files.single.path != null) {
         setState(() => _isUploadingPdf = true);
 
+        final selectedFileName = result.files.single.name;
+
         // 안내 다이얼로그
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: Text('PDF 업로드 중'),
+            title: Text('PDF 처리 중'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
-                Text('파일을 업로드하고 있습니다...\n최대 10MB까지 가능합니다.'),
+                Text('파일을 확인하고 있습니다...'),
               ],
             ),
           ),
         );
 
-        // 1단계: PDF 파일 업로드
-        final uploadedPdf = await ApiService.uploadPDFFile(
-          result.files.single.path!,
-        );
+        // 1단계: 기존 PDF 목록에서 같은 파일명 확인 (중복 체크)
+        final existingPdfs = await ApiService.getPDFList();
+        final duplicatePdf = existingPdfs.where(
+          (pdf) => pdf.originalFilename == selectedFileName
+        ).toList();
 
-        if (uploadedPdf != null) {
+        String? pdfIdToLink;
+        bool isNewUpload = false;
+
+        if (duplicatePdf.isNotEmpty) {
+          // 이미 같은 파일명의 PDF가 존재 → 기존 파일 사용
+          pdfIdToLink = duplicatePdf.first.id;
+        } else {
+          // 새 파일 업로드
+          isNewUpload = true;
+          final uploadedPdf = await ApiService.uploadPDFFile(
+            result.files.single.path!,
+          );
+          if (uploadedPdf != null) {
+            pdfIdToLink = uploadedPdf.id;
+          }
+        }
+
+        if (pdfIdToLink != null) {
           // 2단계: 채팅방에 PDF 연결
           final linkSuccess = await ApiService.linkPDFToRoom(
             _currentRoom!.id,
-            uploadedPdf.id,
+            pdfIdToLink,
           );
 
           Navigator.pop(context); // 로딩 다이얼로그 닫기
 
           if (linkSuccess) {
+            final message = isNewUpload
+              ? '✅ PDF 업로드 완료! 이제 자료 기반으로 학습할 수 있습니다.'
+              : '✅ 기존 PDF 연결 완료! 이제 자료 기반으로 학습할 수 있습니다.';
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('✅ PDF 업로드 완료! 이제 자료 기반으로 학습할 수 있습니다.'),
+                content: Text(message),
                 backgroundColor: Colors.green,
               ),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('⚠️ PDF는 업로드되었지만 채팅방 연결에 실패했습니다.'),
+                content: Text('⚠️ PDF 채팅방 연결에 실패했습니다.'),
                 backgroundColor: Colors.orange,
               ),
             );
