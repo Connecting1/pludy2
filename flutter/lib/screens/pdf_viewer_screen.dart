@@ -148,19 +148,23 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
   // 텍스트 선택 핸들러
   void _handleTextSelection(PdfTextSelectionChangedDetails details) {
     if (_isDrawingMode) return;
-    
+
     setState(() {
       _selectedText = details.selectedText;
     });
 
-    if (details.selectedText != null && details.selectedText!.isNotEmpty) {
-      _showTextSelectionMenu();
-    }
+    // 바로 다이얼로그를 표시하지 않고, 텍스트 선택 상태만 저장
+    // 사용자가 텍스트 범위를 조정할 수 있도록 함
   }
 
-  // 텍스트 선택 메뉴
+  // 텍스트 선택 메뉴 (이제 AppBar 버튼으로 호출됨)
   void _showTextSelectionMenu() {
-    if (_selectedText == null || _selectedText!.isEmpty) return;
+    if (_selectedText == null || _selectedText!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('텍스트를 먼저 선택하세요')),
+      );
+      return;
+    }
 
     showModalBottomSheet(
       context: context,
@@ -177,7 +181,12 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
                 color: Colors.blue.shade50,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(_selectedText!, style: TextStyle(fontSize: 16)),
+              child: Text(
+                _selectedText!,
+                style: TextStyle(fontSize: 16),
+                maxLines: 5,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             SizedBox(height: 20),
             ElevatedButton.icon(
@@ -352,6 +361,13 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
           backgroundColor: Colors.blue,
           foregroundColor: Colors.white,
           actions: [
+            // 텍스트가 선택되었을 때 AI 학습 버튼 표시
+            if (_selectedText != null && _selectedText!.isNotEmpty && !_isDrawingMode)
+              IconButton(
+                icon: Icon(Icons.school),
+                onPressed: _showTextSelectionMenu,
+                tooltip: 'AI 학습',
+              ),
             if (_isDrawingMode)
               IconButton(
                 icon: Icon(Icons.settings),
