@@ -29,6 +29,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
 
   // 텍스트 선택 핸들러
   void _handleTextSelection(PdfTextSelectionChangedDetails details) {
+    print('📝 텍스트 선택 이벤트: ${details.selectedText}');
     setState(() {
       _selectedText = details.selectedText;
     });
@@ -156,6 +157,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
         controller: _pdfViewerController,
         onTextSelectionChanged: _handleTextSelection,
         enableTextSelection: true,
+        interactionMode: PdfInteractionMode.selection,
         canShowScrollHead: true,
         canShowScrollStatus: true,
         pageLayoutMode: PdfPageLayoutMode.continuous,
